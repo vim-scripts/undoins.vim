@@ -1,24 +1,38 @@
-"
-" Mappings that let you undelete the previously deleted text using ^W or ^U
-"  in insert mode. To use just source this file and to undo the previous
-"  deletion, just type ^X^U.
-"
-" Author: Hari <hari_vim@yahoo.com>
+" undoins.vim - Undeleted the immediate previous <C-W> or <C-U> action.
+" Author: Hari Krishna Dara (hari_vim at yahoo dot com)
 " Last Modified: 16-Nov-2001 @ 14:57
+" Created: Sometime before 08-Aug-2001
 " Requires: Vim-6.0
-" Version: 1.0
-
-" This would have happened to everyone at least once. You start typing a new
-"   line and press ^U and kill the line, and then realize you can't get that
-"   line back.  It is painful that you can't undo in insert mode isn't it? This
-"   little script aims at adding a rudimentary backup mechanism by which you can
-"   get back previously killed text through ^U or ^W. To undo what you have just
-"   done (through ^W or ^U) use ^X^U or ^X^W.
+" Version: 1.1
+" Licence: This program is free software; you can redistribute it and/or
+"          modify it under the terms of the GNU General Public License.
+"          See http://www.gnu.org/copyleft/gpl.txt 
+" Acknowledgements:
+"   - Luc Hermitte (hermitte at laas dot fr) for his words_tools.vim and for
+"     the help on constructing s:GetPreviousWordLikeCTRL_W() function.
+" Download From:
+"     http://www.vim.org/script.php?script_id=150
+" Description: 
+" - Vim provides a number or ways to recover some text that you have deleted
+"   (multiple undos, numbered registers, unnamed register etc.), however,
+"   there is no way to recover a line or word that you killed either
+"   accidentally (e.g., pressing <C-W> one extra time) or deliberately if you
+"   are already in insert mode.
+" - This little script tries to compensate for this missing functionality for
+"   the most commonly used two commands, <C-W> and <C-U> such that the text
+"   that is going to be killed is first backed up in an internal script
+"   variable before letting Vim continue to do what you asked it to do.
+" - The script also provides a mapping (by default <C-X><C-U> which you can
+"   customize by using the <Plug>UndoInInsModeUndoKey mapping) that you can
+"   execute to put back the text at the current cursor position. A <C-X><C-U>
+"   immediately followed by a <C-U> or <C-W> is effectively works like an undo
+"   of the previous action.
+" - The script is only going to "estimate" what is going to be deleted by ^W,
+"   but for certain filetypes it may not exactly match the word that Vim is
+"   going to delete, in which case the undo might undo too much or too little.
 "
-" TODO: Currently the script doesn't keep track of the start column where the
-"   editing started, so it might undo a little too much text, but essentially
-"   you are not loosing anything. You just have to manually edit the text that
-"   is put by undo.
+" TODO: 
+"   - Cosider consecutive word deletions. 
 
 if exists("loaded_undoins")
   finish
@@ -31,7 +45,7 @@ inoremap <silent> <C-U> <C-R>=<SID>SaveLineToBeDeleted()<CR><C-U>
 "
 " Define a default mapping if the user hasn't defined one.
 "
-if !hasmapto('<Plug>UndoInInsModeUndoKey')
+if !hasmapto('<Plug>UndoInInsModeUndoKey', 'i')
   imap <unique> <silent> <C-X><C-U> <Plug>UndoInInsModeUndoKey
 endif
 
@@ -41,14 +55,20 @@ inoremap <script> <silent> <Plug>UndoInInsModeUndoKey <C-R>=<SID>ReturnLastDelet
 " Saving one deletion is more than enough. This is only to provide an emergency
 "   backup, in case the user presses ^W by mistake.
 function! s:SaveWordToBeDeleted()
-  let b:lastDeletion = s:GetPreviousWordLikeCTRL_W()
+  let lastWord = s:GetPreviousWordLikeCTRL_W()
+  let wordStartCol = match(strpart(getline('.'), 0, col('.')), lastWord.'\s*')
+	\ + 1 " string index to column number
+  let b:lastDeletion = strpart(lastWord,
+	\ (line("'^") == line('.') && col("'^") > wordStartCol) ?
+	    \     (col("'^") - wordStartCol) : 0)
   return ""
 endfunction
 
 
 function! s:SaveLineToBeDeleted()
   let lin = getline(line('.'))
-  let b:lastDeletion = strpart(lin, 0, col('.') - 1)
+  let b:lastDeletion = strpart(lin, line("'^") == line('.') ? col("'^") - 1: 0,
+	\ col('.') - 1)
   return ""
 endfunction
 
@@ -62,8 +82,8 @@ function! s:ReturnLastDeletion()
 endfunction
 
 
-" With the help of Luc Hermitte <hermitte@laas.fr> from his words_tools.vim
-"   script.
+" With the help of Luc Hermitte (hermitte at laas dot fr) from his
+"   words_tools.vim script.
 " This function tries to return exactly what is going to be deleted by ^W.
 function! s:GetPreviousWordLikeCTRL_W()
   let lin = getline(line('.'))
