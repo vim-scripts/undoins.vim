@@ -1,0 +1,27 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=150
+
+- Vim provides a number or ways to recover some text that you have deleted
+  (multiple undos, numbered registers, unnamed register etc.), however,
+  there is no way to recover a line or word that you killed either
+  accidentally (e.g., pressing <C-W> one extra time) or deliberately if you
+  are already in insert mode.
+- This little script tries to compensate for this missing functionality for
+  the most commonly used two commands, <C-W> and <C-U> such that the text
+  that is going to be killed is first backed up in an internal script
+  variable before letting Vim continue to do what you asked it to do.
+- The script also provides a mapping (by default <C-X><C-U> which you can
+  customize by using the <Plug>UndoInInsModeUndoKey mapping) that you can
+  execute to put back the text at the current cursor position. A <C-X><C-U>
+  immediately followed by a <C-U> or <C-W> is effectively works like an undo
+  of the previous action.
+- The script is only going to "estimate" what is going to be deleted by ^W,
+  but for certain filetypes it may not exactly match the word that Vim is
+  going to delete, in which case the undo might undo too much or too little.
+
+
+This is essentially a 6.0 version of my previous undoInInsertMode.vim script,
+  except that the script works much better now for ^W, thanks to Luc Hermitte
+  (hermitte at laas dot fr) for helping me get this done.
+
+
+Search_key_words: undo insert mode undoins undoins.vim Hari Krishna Dara
